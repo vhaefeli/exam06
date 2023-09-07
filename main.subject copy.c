@@ -64,20 +64,40 @@ char *str_join(char *buf, char *add)
 	return (newbuf);
 }
 
-int nbr_clients = 0;
 
-typedef struct s_client
+	typedef struct s_client
+	{
+	int id;
+	char buf[10000];
+	} t_client;
+
+	t_client clients[1024];
+	char readbuf[424242], writebuf[424242];
+	fd_set readfds, writefds, activefds;
+	int max_fd;
+
+	int servfd;
+
+void sendAll(int fd_sender)
 {
-  int id;
-  char *buf;
-  bool online;
-} t_client;
+	if (!writebuf[0])
+		return ;
+	else
+	{
+		for (int i; i <= max_fd; i++)
+		{
+			if (!FD_ISSET(i, &writefds) ||  )
+		}
+	}
+	memset(writebuf, 0, 424242);
+}
 
 
+int main(int argc, char *argv[]) {
 
+	int nbr_clients = 0;
 
-int main(int argc, char **arvg) {
-	int sockfd, connfd, len;
+	int clientfd, len;
 	struct sockaddr_in servaddr, cli; 
 
   if (argc != 2)
@@ -86,14 +106,21 @@ int main(int argc, char **arvg) {
       return (1);
     }
 
+	memset(clients, 0, sizeof(t_client) * 1024);
+	memset(readbuf, 0, 424242);
+	memset(writebuf, 0, 424242);
+	FD_ZERO(&activefds);
+	readfds = activefds;
+	writefds = activefds;
+
 	// socket create and verification 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-	if (sockfd == -1) { 
+	servfd = socket(AF_INET, SOCK_STREAM, 0); 
+	if (servfd == -1) { 
 		exit_fatal();
 	} 
 	else
 		printf("Socket successfully created..\n"); 
-	bzero(&servaddr, sizeof(servaddr)); 
+	memset(&servaddr, 0, sizeof(servaddr)); 
 
 	// assign IP, PORT 
 	servaddr.sin_family = AF_INET; 
@@ -101,20 +128,43 @@ int main(int argc, char **arvg) {
 	servaddr.sin_port = htons(atoi(argv[1])); 
   
 	// Binding newly created socket to given IP and verification 
-	if ((bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) { 
+	if ((bind(servfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) { 
 		exit_fatal();
 	} 
-	else
-		printf("Socket successfully binded..\n");
-	if (listen(sockfd, 10) != 0) {
+	if (listen(servfd, 10) != 0) {
 		exit_fatal();
 	}
-	len = sizeof(cli);
-	connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
-	if (connfd < 0) { 
-        printf("server acccept failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("server acccept the client...\n");
-}
+	max_fd = servfd;
+	
+	while(1)
+	{
+		readfds = activefds;
+		writefds = activefds;
+
+		if (select(max_fd + 1, &readfds, &writefds, NULL, NULL) < 0)
+			continue;
+		for (int fd = 0; fd <= max_fd; fd++)
+		{
+			if (FD_ISSET(fd, &readfds))
+			{
+				if (fd == servfd)
+				{
+					len = sizeof(cli);
+					clientfd = accept(servfd, (struct sockaddr *)&cli, &len);
+					if (clientfd < 0) { 
+						continue;
+					} 
+					else
+					{
+						sprintf(writebuf, "server: client %d just arrived\n", clientfd);
+						printf(writebuf);
+						sendAll(clientfd);
+					}
+				}
+				}
+			}
+		}
+
+
+			
+	}
