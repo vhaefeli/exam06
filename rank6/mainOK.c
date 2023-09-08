@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 
 
@@ -34,7 +36,7 @@ void sendAll(int fd_sender)
 		return ;
 	else
 	{
-		for (int i; i <= max_fd; i++)
+		for (int i = 0; i <= max_fd; i++)
 		{
 			if (!FD_ISSET(i, &writefds) || i == servfd || i == fd_sender)
 				continue;
@@ -49,7 +51,8 @@ int main(int argc, char *argv[]) {
 
 	int nbr_clients = 0;
 
-	int clientfd, len;
+	int clientfd;
+	socklen_t len;
 	struct sockaddr_in servaddr, cli; 
 
   if (argc != 2)
@@ -112,8 +115,8 @@ int main(int argc, char *argv[]) {
 						max_fd = clientfd;
 					clients[clientfd].id = nbr_clients;
 					nbr_clients++;
-					sprintf(writebuf, "server: client %d just arrived\n", clientfd);
-					printf(writebuf);
+					sprintf(writebuf, "server: client %d just arrived\n", clients[clientfd].id);
+					printf("%s\n" ,writebuf);
 					sendAll(clientfd);
 					break;
 				}
@@ -123,6 +126,7 @@ int main(int argc, char *argv[]) {
 					if( n_bytes <= 0)
 					{
 						sprintf(writebuf, "server: client %d just left\n", clients[fd].id);
+						printf("%s\n" ,writebuf);
 						sendAll(fd);
 						FD_CLR(fd, &activefds);
 						close(fd);
@@ -133,12 +137,13 @@ int main(int argc, char *argv[]) {
 						for( int i = 0, j = 0 ; i < n_bytes; i++, j++)
 						{
 							clients[fd].buf[j] = readbuf[i];
-							if (readbuf[i] == '/n' || readbuf[i] == 0)
+							if (readbuf[i] == '\n' || readbuf[i] == 0)
 							{
 								clients[fd].buf[j] = 0;
-								sprintf(writebuf, "client %d: %s", fd, clients[fd].buf);
+								sprintf(writebuf, "client %d: %s\n", clients[fd].id, clients[fd].buf);
+								printf("%s\n" ,writebuf);
 								sendAll(fd);
-								memeset(clients[fd].buf, 0, j);
+								memset(clients[fd].buf, 0, j);
 								j= -1;
 							}
 						}
